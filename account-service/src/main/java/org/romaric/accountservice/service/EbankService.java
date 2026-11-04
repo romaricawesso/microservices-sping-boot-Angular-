@@ -58,7 +58,7 @@ public class EbankService {
         return saveAccount;
     }
 
-    public AccountTransaction credits(String accountId, double amount ){
+    public AccountTransaction credit(String accountId, double amount ){
         if (amount <= 0) throw new NegativeAmountException("amount should be positive");
         Account account = getAccountByid(accountId);
         account.setBalance(account.getBalance()+amount);
