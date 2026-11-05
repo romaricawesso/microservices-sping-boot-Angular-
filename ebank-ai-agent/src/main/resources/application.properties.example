@@ -2,7 +2,16 @@ spring.application.name=ebank-ai-agent
 server.port=8085
 
 # Google Gemini AI Configuration
-# Copy this file to application.properties and set your API key
-# Or set the GOOGLE_GENAI_API_KEY environment variable
-spring.ai.google.genai.api-key=YOUR_GOOGLE_GENAI_API_KEY_HERE
+# Copiez ce fichier en application.properties et remplacez la clé ci-dessous
+# OU définissez la variable d'environnement GOOGLE_GENAI_API_KEY
+spring.ai.google.genai.api-key=VOTRE_CLE_API_GOOGLE_GENAI_ICI
+spring.ai.google.genai.chat.model=gemini-3.5-flash-lite
 spring.ai.chat.client.enabled=true
+
+# MCP Client Configuration - Connect to account-service MCP server
+spring.ai.mcp.client.streamable-http.connections.ebank-account.url=http://localhost:8080
+
+# Debug logging
+logging.level.org.romaric=DEBUG
+logging.level.org.springframework.ai.mcp=DEBUG
+logging.level.org.springframework.ai.tool=DEBUG
