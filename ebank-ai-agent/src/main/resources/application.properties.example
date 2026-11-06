@@ -8,6 +8,10 @@ spring.ai.google.genai.api-key=VOTRE_CLE_API_GOOGLE_GENAI_ICI
 spring.ai.google.genai.chat.model=gemini-3.5-flash-lite
 spring.ai.chat.client.enabled=true
 
+# Discord Bot Configuration
+# Définissez la variable d'environnement DISCORD_TOKEN
+discord.token=VOTRE_TOKEN_DISCORD_ICI
+
 # MCP Client Configuration - Connect to account-service MCP server
 spring.ai.mcp.client.streamable-http.connections.ebank-account.url=http://localhost:8080
 

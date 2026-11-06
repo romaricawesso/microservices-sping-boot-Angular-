@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/chat")
 public class EbankAgentRestController {
@@ -19,12 +21,16 @@ public class EbankAgentRestController {
     }
 
     @GetMapping
-    public String chat(@RequestParam(defaultValue = "Hello") String query){
-        return ebankAiAgent.chat(query);
+    public String chat(@RequestParam(defaultValue = "Hello") String query,
+                       @RequestParam(required = false) String sessionId){
+        String id = (sessionId != null && !sessionId.isEmpty()) ? sessionId : UUID.randomUUID().toString();
+        return ebankAiAgent.chat(id, query);
     }
 
     @PostMapping
-    public String chatPost(@RequestBody String query){
-        return ebankAiAgent.chat(query);
+    public String chatPost(@RequestBody String query,
+                           @RequestParam(required = false) String sessionId){
+        String id = (sessionId != null && !sessionId.isEmpty()) ? sessionId : UUID.randomUUID().toString();
+        return ebankAiAgent.chat(id, query);
     }
 }
