@@ -25,10 +25,11 @@ ebank-bdcc-app/
 │   ├── REST API          # Endpoints HTTP pour la gestion des comptes
 │   └── MCP Server        # Serveur MCP exposant les outils bancaires
 │
-└── ebank-ai-agent/       # Chatbot IA avec Google Gemini (Port 8085)
+└── ebank-ai-agent/       # Chatbot IA avec Ollama (Port 8085)
     ├── REST API          # Endpoint de chat HTTP
     ├── MCP Client        # Client MCP connecté à account-service
-    └── Discord Bot       # Bot Discord pour le chat
+    ├── Mémoire           # Historique persistant en base H2
+    └── Discord Bot       # ⚠️ Temporairement désactivé
 ```
 
 ### Flux de données
@@ -45,43 +46,48 @@ Utilisateur → ebank-ai-agent (Chatbot IA) → MCP → account-service (Banque)
 
 - **Java 21** (JDK)
 - **Maven 3.8+**
-- **Google Gemini API Key** — [Obtenir une clé](https://aistudio.google.com/apikey)
-- **Discord Bot Token** (optionnel) — [Créer un bot Discord](https://discord.com/developers/applications)
+- **Ollama** — [Installer Ollama](https://ollama.com/download)
+- **Modèle Ollama** : `llama3.1:8b` (recommandé pour les outils MCP)
+
+### Installer Ollama et le modèle
+
+```bash
+# Installer Ollama
+# Télécharger depuis https://ollama.com/download
+
+# Télécharger le modèle Llama 3.1 8B (environ 5 Go)
+ollama pull llama3.1:8b
+```
 
 ---
 
 ## Configuration
 
-### 1. Variables d'environnement
+### 1. Ollama
 
-Avant de démarrer l'application, définissez les variables d'environnement suivantes :
-
-#### Windows (PowerShell)
-
-```powershell
-[System.Environment]::SetEnvironmentVariable('GOOGLE_GENAI_API_KEY', 'VOTRE_CLE_API', [System.EnvironmentVariableTarget]::User)
-[System.Environment]::SetEnvironmentVariable('DISCORD_TOKEN', 'VOTRE_TOKEN_DISCORD', [System.EnvironmentVariableTarget]::User)
-```
-
-#### Linux / macOS
+Assurez-vous que Ollama est installé et en cours d'exécution :
 
 ```bash
-export GOOGLE_GENAI_API_KEY="VOTRE_CLE_API"
-export DISCORD_TOKEN="VOTRE_TOKEN_DISCORD"
+# Vérifier que Ollama tourne
+ollama list
+
+# Télécharger le modèle si ce n'est pas déjà fait
+ollama pull llama3.1:8b
 ```
 
-> ⚠️ **Important** : Les fichiers `application.properties` sont exclus de Git pour protéger les secrets. Ne commitez jamais vos clés API.
+Ollama démarre automatiquement un serveur local sur `http://localhost:11434`.
 
 ### 2. Fichier de configuration
 
-Copiez le fichier exemple et configurez-le :
+Le fichier `ebank-ai-agent/src/main/resources/application.properties` est déjà configuré pour utiliser Ollama par défaut. Aucune clé API n'est nécessaire car le modèle tourne localement.
 
-```bash
-cd ebank-ai-agent/src/main/resources/
-cp application.properties.example application.properties
+Pour personnaliser le modèle, modifiez :
+
+```properties
+spring.ai.ollama.chat.model=llama3.1:8b
 ```
 
-Puis remplacez les placeholders par vos vraies clés ou utilisez les variables d'environnement.
+> ⚠️ **Important** : Le fichier `application.properties` est exclu de Git via `.gitignore`. Utilisez `application.properties.example` comme modèle.
 
 ---
 
@@ -146,13 +152,46 @@ Service de gestion des comptes bancaires avec :
 
 ### Ebank-AI-Agent
 
-Chatbot IA alimenté par Google Gemini avec :
+Chatbot IA alimenté par Ollama (modèle local) avec :
 
-- **Modèle IA** : Google Gemini (gemini-3.5-flash-lite)
+- **Modèle IA** : Ollama avec Llama 3.1 8B (exécutable localement, sans clé API)
 - **MCP Client** : Connecté à account-service pour les opérations bancaires
-- **Mémoire de conversation** : Historique des échanges par session
-- **Discord Bot** : Interface Discord pour le chat
+- **Mémoire de conversation** : Historique persistant en base H2 par session utilisateur
+- **Discord Bot** : ⚠️ Temporairement désactivé (token invalide)
 - **REST API** : Interface web pour le chat
+
+#### Mémoire de conversation
+
+Le chatbot conserve l'historique des échanges pour chaque session utilisateur dans une base H2 persistante. Cela permet à l'IA de se souvenir du contexte des conversations précédentes.
+
+**Endpoints de la mémoire :**
+
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| `GET` | `/api/chat/memory/history?sessionId=...` | Récupère l'historique d'une session |
+| `DELETE` | `/api/chat/memory/clear?sessionId=...` | Efface l'historique d'une session |
+| `GET` | `/api/chat/memory/count?sessionId=...` | Compte le nombre de messages d'une session |
+
+**Exemples :**
+
+```bash
+# Voir l'historique d'une session
+curl http://localhost:8085/api/chat/memory/history?sessionId=romaric
+
+# Compter les messages
+curl http://localhost:8085/api/chat/memory/count?sessionId=romaric
+
+# Effacer l'historique
+curl -X DELETE http://localhost:8085/api/chat/memory/clear?sessionId=romaric
+```
+
+**Console H2 :**
+
+La base de données H2 est accessible via :
+- **URL** : `http://localhost:8085/h2-console`
+- **JDBC URL** : `jdbc:h2:file:./data/ebank-ai-agent-db`
+- **Utilisateur** : `sa`
+- **Mot de passe** : (vide)
 
 ---
 
@@ -220,21 +259,25 @@ curl -X POST "http://localhost:8080/api/accounts/1/credit?amount=10000"
 |---------|----------|-------------|
 | `GET` | `/api/chat?query=...&sessionId=...` | Chat avec paramètre URL |
 | `POST` | `/api/chat` | Chat avec corps de requête |
+| `GET` | `/api/chat/memory/history?sessionId=...` | Historique d'une session |
+| `DELETE` | `/api/chat/memory/clear?sessionId=...` | Efface l'historique d'une session |
+| `GET` | `/api/chat/memory/count?sessionId=...` | Nombre de messages d'une session |
 
 ---
 
 ## Discord Bot
 
-Le bot Discord permet d'interagir avec le chatbot IA directement depuis Discord.
+> ⚠️ **Temporairement désactivé** — Le bot Discord est actuellement désactivé car le token de connexion est invalide. La fonctionnalité sera réactivée une fois un nouveau token configuré.
 
-### Configuration
+### Configuration (lors de la réactivation)
 
 1. Créez une application sur le [Portail développeur Discord](https://discord.com/developers/applications)
 2. Générez un token Bot
-3. Définissez la variable `DISCORD_TOKEN`
+3. Définissez la variable `DISCORD_TOKEN` ou modifiez `discord.token` dans `application.properties`
 4. Invitez le bot sur votre serveur Discord
+5. Réactivez le bot en retirant l'exclusion de `DiscordBot` dans `EbankAiAgentApplication.java`
 
-### Utilisation
+### Utilisation (lors de la réactivation)
 
 Envoyez un message dans un canal où le bot est présent :
 
@@ -244,7 +287,7 @@ Envoyez un message dans un canal où le bot est présent :
 > Effectue un crédit de 50000 sur le compte 1
 ```
 
-Le bot répondra automatiquement en utilisant l'IA Google Gemini et les outils bancaires MCP.
+Le bot répondra automatiquement en utilisant le modèle Ollama local et les outils bancaires MCP.
 
 ---
 
@@ -254,11 +297,12 @@ Le bot répondra automatiquement en utilisant l'IA Google Gemini et les outils b
 |-------------|---------|------|
 | Spring Boot | 4.1.2 | Framework principal |
 | Spring AI | 2.0.1 | Intégration IA et MCP |
-| Google GenAI | - | Modèle de langage Gemini |
-| H2 Database | - | Base de données en mémoire |
+| Ollama | - | Serveur de modèles IA locaux |
+| Llama 3.1 8B | - | Modèle de langage (function calling) |
+| H2 Database | - | Base de données (mémoire + fichier) |
 | Spring Data JPA | - | Persistance des données |
 | Spring Cloud | 2025.1.4 | Configuration et découverte |
-| Discord4J / JDA | - | Bot Discord |
+| Discord4J / JDA | - | Bot Discord (désactivé) |
 | Lombok | - | Réduction du code boilerplate |
 | SpringDoc OpenAPI | 3.2.0 | Documentation Swagger |
 
@@ -286,8 +330,10 @@ ebank-bdcc-app/
     └── src/main/
         ├── java/.../ebankaiagent/
         │   ├── agents/              # Agent IA et mémoire de conversation
+        │   ├── domain/              # Entités JPA (ConversationMessage)
+        │   ├── repository/          # Repositories JPA
         │   ├── Rest/                # Contrôleur REST du chat
-        │   └── discord/             # Contrôleur Discord
+        │   └── discord/             # Contrôleur Discord (désactivé)
         └── resources/
             ├── application.properties
             └── application.properties.example
@@ -297,10 +343,10 @@ ebank-bdcc-app/
 
 ## ⚠️ Notes importantes
 
-- **Secrets** : Les clés API et tokens sont stockés dans des variables d'environnement, jamais dans le code source.
-- **Base de données** : H2 en mémoire — les données sont perdues à chaque redémarrage.
-- **Modèle IA** : `gemini-3.5-flash-lite` est utilisé par défaut. D'autres modèles sont disponibles.
-- **Mémoire de conversation** : Chaque session de chat conserve l'historique des échanges.
+- **Base de données** : Account-Service utilise H2 en mémoire (données perdues au redémarrage). Ebank-AI-Agent utilise H2 en fichier pour la mémoire de conversation (données persistantes).
+- **Modèle IA** : `llama3.1:8b` via Ollama est utilisé par défaut. D'autres modèles compatibles avec le function calling sont disponibles (ex: `qwen2.5`, `mistral`).
+- **Mémoire de conversation** : Chaque session de chat conserve l'historique des échanges dans une base H2 persistante. Les données survivent aux redémarrages de l'application.
+- **Discord Bot** : Temporairement désactivé en attendant un token valide.
 
 ---
 

@@ -1,32 +1,53 @@
 package org.romaric.ebankaiagent.agents;
 
+import org.romaric.ebankaiagent.domain.ConversationMessage;
+import org.romaric.ebankaiagent.repository.ConversationMessageRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @Service
 public class ConversationMemory {
 
-    private final Map<String, List<String>> conversations = new ConcurrentHashMap<>();
+    private final ConversationMessageRepository repository;
 
+    public ConversationMemory(ConversationMessageRepository repository) {
+        this.repository = repository;
+    }
+
+    @Transactional
     public void addMessage(String sessionId, String message) {
-        conversations
-                .computeIfAbsent(sessionId, k -> new ArrayList<>())
-                .add(message);
+        // Extraire le rôle et le contenu depuis le format "Rôle: contenu"
+        String role;
+        String content;
+        if (message.contains(": ")) {
+            int index = message.indexOf(": ");
+            role = message.substring(0, index);
+            content = message.substring(index + 2);
+        } else {
+            role = "Utilisateur";
+            content = message;
+        }
+        repository.save(new ConversationMessage(sessionId, role, content));
     }
 
+    @Transactional(readOnly = true)
     public List<String> getHistory(String sessionId) {
-        return conversations.getOrDefault(sessionId, new ArrayList<>());
+        return repository.findBySessionIdOrderByCreatedAtAsc(sessionId)
+                .stream()
+                .map(msg -> msg.getRole() + ": " + msg.getContent())
+                .collect(Collectors.toList());
     }
 
+    @Transactional
     public void clearHistory(String sessionId) {
-        conversations.remove(sessionId);
+        repository.deleteBySessionId(sessionId);
     }
 
+    @Transactional(readOnly = true)
     public int getMessageCount(String sessionId) {
-        return conversations.getOrDefault(sessionId, new ArrayList<>()).size();
+        return (int) repository.countBySessionId(sessionId);
     }
 }
