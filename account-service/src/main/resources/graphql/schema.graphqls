@@ -1,0 +1,51 @@
+enum AccountType {
+    CURRENT_ACCOUNT
+    SAVING_ACCOUNT
+}
+
+enum AccountStatus {
+    CREATED
+    ACTIVATED
+    BLOCKED
+}
+
+enum TransactionType {
+    CREDIT
+    DEBIT
+}
+
+type Account {
+    id: String
+    createdAt: String
+    balance: Float
+    type: AccountType
+    status: AccountStatus
+    currency: String
+    customerId: Int
+}
+
+type AccountTransaction {
+    id: Int
+    dateTime: String
+    amount: Float
+    type: TransactionType
+    account: Account
+}
+
+input AccountDto {
+    initialBalance: Float!
+    type: AccountType!
+    currency: String!
+    customerId: Int!
+}
+
+type Query {
+    getAllAccounts: [Account]
+    getAccountById(id: String!): Account
+}
+
+type Mutation {
+    saveAccount(account: AccountDto!): Account
+    credit(accountId: String!, amount: Float!): AccountTransaction
+    debit(accountId: String!, amount: Float!): AccountTransaction
+}
