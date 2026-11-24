@@ -27,15 +27,15 @@ public class EbankAgentRestController {
     }
 
     @GetMapping
-    public String chat(@RequestParam(defaultValue = "Hello") String query,
-                       @RequestParam(required = false) String sessionId){
+    public String chat(@RequestParam(value = "query", defaultValue = "Hello") String query,
+                       @RequestParam(value = "sessionId", required = false) String sessionId){
         String id = (sessionId != null && !sessionId.isEmpty()) ? sessionId : UUID.randomUUID().toString();
         return ebankAiAgent.chat(id, query);
     }
 
     @PostMapping
     public String chatPost(@RequestBody String query,
-                           @RequestParam(required = false) String sessionId){
+                           @RequestParam(value = "sessionId", required = false) String sessionId){
         String id = (sessionId != null && !sessionId.isEmpty()) ? sessionId : UUID.randomUUID().toString();
         return ebankAiAgent.chat(id, query);
     }
@@ -43,18 +43,18 @@ public class EbankAgentRestController {
     // --- Endpoints pour gérer la mémoire de conversation ---
 
     @GetMapping("/memory/history")
-    public List<String> getHistory(@RequestParam String sessionId){
+    public List<String> getHistory(@RequestParam(value = "sessionId") String sessionId){
         return conversationMemory.getHistory(sessionId);
     }
 
     @DeleteMapping("/memory/clear")
-    public Map<String, String> clearHistory(@RequestParam String sessionId){
+    public Map<String, String> clearHistory(@RequestParam(value = "sessionId") String sessionId){
         conversationMemory.clearHistory(sessionId);
         return Map.of("message", "Historique effacé pour la session: " + sessionId);
     }
 
     @GetMapping("/memory/count")
-    public Map<String, Object> getMessageCount(@RequestParam String sessionId){
+    public Map<String, Object> getMessageCount(@RequestParam(value = "sessionId") String sessionId){
         int count = conversationMemory.getMessageCount(sessionId);
         return Map.of("sessionId", sessionId, "messageCount", count);
     }

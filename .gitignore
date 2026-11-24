@@ -43,3 +43,17 @@ build/
 **/application-*.properties
 **/application.yml
 **/application-*.yml
+# Configs sans secret : versionnées (ebank-ai-agent reste ignoré : il contient des tokens)
+!customer-service/src/main/resources/application.properties
+!gateway-service/src/main/resources/application.properties
+!discovery-service/src/main/resources/application.properties
+
+### JVM crash logs ###
+hs_err_pid*.log
+hs_err_pid*.mdmp
+replay_pid*.log
+
+### Bases H2 locales (historique des conversations) ###
+data/
+*.mv.db
+*.trace.db
